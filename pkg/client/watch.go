@@ -26,6 +26,9 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+// zhou: client to watch something, and we will received the result from a channel.
+//       Refer to "watch_test.go"
+
 // NewWithWatch returns a new WithWatch.
 func NewWithWatch(config *rest.Config, options Options) (WithWatch, error) {
 	client, err := newClient(config, options)

@@ -179,6 +179,8 @@ func (r *runnableGroup) Start(ctx context.Context) error {
 	return retErr
 }
 
+// zhou: README,
+
 // reconcile is our main entrypoint for every runnable added
 // to this group. Its primary job is to read off the internal channel
 // and schedule runnables while tracking their state.
@@ -229,6 +231,8 @@ func (r *runnableGroup) reconcile() {
 		}(runnable)
 	}
 }
+
+// zhou: README,
 
 // Add should be able to be called before and after Start, but not after StopAndWait.
 // Add should return an error when called during StopAndWait.
