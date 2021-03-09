@@ -104,6 +104,9 @@ func NewFakeClient(initObjs ...runtime.Object) client.WithWatch {
 	return NewClientBuilder().WithRuntimeObjects(initObjs...).Build()
 }
 
+// zhou: "When in doubt, it's almost always better not to use this package and instead use
+//        envtest.Environment with a real client and API server."
+
 // NewClientBuilder returns a new builder to create a fake client.
 func NewClientBuilder() *ClientBuilder {
 	return &ClientBuilder{}
@@ -125,6 +128,8 @@ type ClientBuilder struct {
 	indexes map[schema.GroupVersionKind]map[string]client.IndexerFunc
 }
 
+// zhou: set scheme like manager
+
 // WithScheme sets this builder's internal scheme.
 // If not set, defaults to client-go's global scheme.Scheme.
 func (f *ClientBuilder) WithScheme(scheme *runtime.Scheme) *ClientBuilder {
@@ -140,6 +145,8 @@ func (f *ClientBuilder) WithRESTMapper(restMapper meta.RESTMapper) *ClientBuilde
 	f.restMapper = restMapper
 	return f
 }
+
+// zhou: pass objects to "apiserver"
 
 // WithObjects can be optionally used to initialize this fake client with client.Object(s).
 func (f *ClientBuilder) WithObjects(initObjs ...client.Object) *ClientBuilder {
@@ -215,6 +222,8 @@ func (f *ClientBuilder) WithInterceptorFuncs(interceptorFuncs interceptor.Funcs)
 	f.interceptorFuncs = &interceptorFuncs
 	return f
 }
+
+// zhou: build a new fake client, could be passed to Reconile()
 
 // Build builds and returns a new fake client.
 func (f *ClientBuilder) Build() client.WithWatch {

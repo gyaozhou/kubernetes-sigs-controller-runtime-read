@@ -60,6 +60,11 @@ func BlockUntilSynced(shouldBlock bool) InformerGetOption {
 	}
 }
 
+// zhou: by the interface, we can know that "Cache interface" is used to interact with Informer
+//       and handle "client.Reader interface".
+//       In other words, it is used to maintain read cache and read from this cache.
+//       Implemented by informerCache struct.
+
 // Cache knows how to load Kubernetes objects, fetch informers to request
 // to receive events for Kubernetes objects (at a low-level),
 // and add indices to fields on the objects stored in the cache.
@@ -70,6 +75,9 @@ type Cache interface {
 	// Informers loads informers and adds field indices.
 	Informers
 }
+
+// zhou: Used to manage many "Informer interface".
+//       "InformersMap struct" and "multiNamespaceCache struct" implemented the interface.
 
 // Informers knows how to create or fetch informers for different
 // group-version-kinds, and add indices to those informers.  It's safe to call
@@ -96,6 +104,9 @@ type Informers interface {
 	// FieldIndexer adds indices to the managed informers.
 	client.FieldIndexer
 }
+
+// zhou: "client-go/tools/cache/shared_informer.go sharedIndexInformer" implements this interface.
+//       By this way, limit the api controller could talk with client-go.
 
 // Informer allows you to interact with the underlying informer.
 type Informer interface {
@@ -212,6 +223,8 @@ type Options struct {
 	//
 	// After calling this handler, the informer will backoff and retry.
 	DefaultWatchErrorHandler toolscache.WatchErrorHandler
+
+	// zhou: whether make deepcopy before returning to user's controller
 
 	// DefaultUnsafeDisableDeepCopy is the default for UnsafeDisableDeepCopy
 	// for everything that doesn't specify this.
@@ -334,6 +347,10 @@ type Config struct {
 
 // NewCacheFunc - Function for creating a new cache from the options and a rest config.
 type NewCacheFunc func(config *rest.Config, opts Options) (Cache, error)
+
+// zhou: create a implementation of "Cache interface".
+//       This function is the default value of "NewCacheFunc".
+//       Used to create informers to setup cache and the cached read client.
 
 // New initializes and returns a new Cache.
 func New(cfg *rest.Config, opts Options) (Cache, error) {

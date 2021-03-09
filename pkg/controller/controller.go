@@ -33,6 +33,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+// zhou: options for a controller, used in "ctrl.NewControllerManagedBy"
+
 // Options are the arguments for creating a new Controller.
 type Options = TypedOptions[reconcile.Request]
 
@@ -43,6 +45,8 @@ type TypedOptions[request comparable] struct {
 	// Defaults to the Controller.SkipNameValidation setting from the Manager if unset.
 	// Defaults to false if Controller.SkipNameValidation setting from the Manager is also unset.
 	SkipNameValidation *bool
+
+	// zhou: number of goroutine to handle this controller
 
 	// MaxConcurrentReconciles is the maximum number of concurrent Reconciles which can be run. Defaults to 1.
 	MaxConcurrentReconciles int
@@ -60,8 +64,13 @@ type TypedOptions[request comparable] struct {
 	// Defaults to true, which means the controller will use leader election.
 	NeedLeaderElection *bool
 
+	// zhou: populated in Builder.complete() or Builder.WithOptions(), the latter could overwrite
+	//       previous. Reconciler implementation should be implemented by user.
+
 	// Reconciler reconciles an object
 	Reconciler reconcile.TypedReconciler[request]
+
+	// zhou: README,
 
 	// RateLimiter is used to limit how frequently requests may be queued.
 	// Defaults to MaxOfRateLimiter which has both overall and per-item rate limiting.
@@ -85,6 +94,8 @@ type TypedOptions[request comparable] struct {
 	LogConstructor func(request *request) logr.Logger
 }
 
+// zhou: implemented by "pkg/internal/controller/controller.go, Controller struct"
+
 // Controller implements a Kubernetes API.  A Controller manages a work queue fed reconcile.Requests
 // from source.Sources.  Work is performed through the reconcile.Reconciler for each enqueued item.
 // Work typically is reads and writes Kubernetes objects to make the system state match the state specified
@@ -107,6 +118,8 @@ type TypedController[request comparable] interface {
 	GetLogger() logr.Logger
 }
 
+// zhou: create a new controller object, add to manager.
+
 // New returns a new Controller registered with the Manager.  The Manager will ensure that shared Caches have
 // been synced before the Controller is Started.
 //
@@ -127,6 +140,8 @@ func NewTyped[request comparable](name string, mgr manager.Manager, options Type
 	// Add the controller as a Manager components
 	return c, mgr.Add(c)
 }
+
+// zhou:
 
 // NewUnmanaged returns a new controller without adding it to the manager. The
 // caller is responsible for starting the returned controller.
@@ -190,6 +205,8 @@ func NewTypedUnmanaged[request comparable](name string, mgr manager.Manager, opt
 		}
 	}
 
+	// zhou: used to throttling workqueue, if not specified, set default strategy
+
 	if options.RateLimiter == nil {
 		if ptr.Deref(mgr.GetControllerOptions().UsePriorityQueue, false) {
 			options.RateLimiter = workqueue.NewTypedItemExponentialFailureRateLimiter[request](5*time.Millisecond, 1000*time.Second)
@@ -197,6 +214,8 @@ func NewTypedUnmanaged[request comparable](name string, mgr manager.Manager, opt
 			options.RateLimiter = workqueue.DefaultTypedControllerRateLimiter[request]()
 		}
 	}
+
+	// zhou: create work queue consumed by user's controller.
 
 	if options.NewQueue == nil {
 		options.NewQueue = func(controllerName string, rateLimiter workqueue.TypedRateLimiter[request]) workqueue.TypedRateLimitingInterface[request] {

@@ -34,6 +34,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
+// zhou: this package used to define event source.
+//       Using "type Kind struct {}" for cluster internal object events.
+//       Using "type Channel struct {}" for cluster external object events.
+
 // Source is a source of events (e.g. Create, Update, Delete operations on Kubernetes Objects, Webhook callbacks, etc)
 // which should be processed by event.EventHandlers to enqueue reconcile.Requests.
 //
@@ -113,6 +117,8 @@ func WithBufferSize[object any, request comparable](bufferSize int) ChannelOpt[o
 		c.bufferSize = &bufferSize
 	}
 }
+
+// zhou: README, used to collect events from outside of cluster.
 
 // Channel is used to provide a source of events originating outside the cluster
 // (e.g. GitHub Webhook callback).  Channel requires the user to wire the external
@@ -260,6 +266,8 @@ func (cs *channel[object, request]) syncLoop(ctx context.Context) {
 		}
 	}
 }
+
+// zhou: what's the difference between "Kind struct" ???
 
 // Informer is used to provide a source of events originating inside the cluster from Watches (e.g. Pod Create).
 type Informer struct {
