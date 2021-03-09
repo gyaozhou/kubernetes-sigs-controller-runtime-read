@@ -50,6 +50,8 @@ type Options struct {
 	// Cache, if provided, is used to read objects from the cache.
 	Cache *CacheOptions
 
+	// zhou:
+
 	// DryRun instructs the client to only perform dry run requests.
 	DryRun *bool
 }
@@ -70,6 +72,9 @@ type CacheOptions struct {
 
 // NewClientFunc allows a user to define how to create a client.
 type NewClientFunc func(config *rest.Config, options Options) (Client, error)
+
+// zhou: create client which read/write directly from the api server !!!
+//       The read cached client is created from manager->cluster->GetClient(), not here.
 
 // New returns a new Client using the provided config and Options.
 //
@@ -102,6 +107,8 @@ func New(config *rest.Config, options Options) (c Client, err error) {
 	return c, err
 }
 
+// zhou: README,
+
 func newClient(config *rest.Config, options Options) (*client, error) {
 	if config == nil {
 		return nil, fmt.Errorf("must provide non-nil rest.Config to client.New")
@@ -130,6 +137,8 @@ func newClient(config *rest.Config, options Options) (*client, error) {
 		}
 	}
 
+	// zhou: if not provided by user, using global variable "scheme.Scheme"
+
 	// Init a scheme if none provided
 	if options.Scheme == nil {
 		options.Scheme = scheme.Scheme
@@ -154,6 +163,9 @@ func newClient(config *rest.Config, options Options) (*client, error) {
 		structuredResourceByType:   make(map[schema.GroupVersionKind]*resourceMeta),
 		unstructuredResourceByType: make(map[schema.GroupVersionKind]*resourceMeta),
 	}
+
+	// zhou: client used to read Kubernetes object (core, aggregated, or custom
+	//       resource based) in the form of PartialObjectMetadata objects.
 
 	rawMetaClient, err := metadata.NewForConfigAndClient(metadata.ConfigFor(config), options.HTTPClient)
 	if err != nil {
@@ -198,6 +210,9 @@ func newClient(config *rest.Config, options Options) (*client, error) {
 }
 
 var _ Client = &client{}
+
+// zhou: facilit to use different client for different GVK and type.
+//       "clientCache struct" will manage clients.
 
 // client is a client.Client configured to either read from a local cache or directly from the API server.
 // Write operations are always performed directly on the API server.
@@ -266,6 +281,8 @@ func (c *client) Scheme() *runtime.Scheme {
 func (c *client) RESTMapper() meta.RESTMapper {
 	return c.mapper
 }
+
+// zhou: operations handler for object
 
 // Create implements client.Client.
 func (c *client) Create(ctx context.Context, obj Object, opts ...CreateOption) error {
@@ -338,6 +355,8 @@ func (c *client) Apply(ctx context.Context, obj runtime.ApplyConfiguration, opts
 		return c.typedClient.Apply(ctx, obj, opts...)
 	}
 }
+
+// zhou: user's "r.Client.Get()" will use it.
 
 // Get implements client.Client.
 func (c *client) Get(ctx context.Context, key ObjectKey, obj Object, opts ...GetOption) error {

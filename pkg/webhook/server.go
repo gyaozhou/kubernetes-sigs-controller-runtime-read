@@ -130,6 +130,10 @@ type DefaultServer struct {
 	webhookMux *http.ServeMux
 }
 
+// zhou: the controller/webhook deployment will mount cert's Secret in path
+//       "mountPath: /tmp/k8s-webhook-server/serving-certs"
+//       So, webhook server could get it here.
+
 // setDefaults does defaulting for the Server.
 func (o *Options) setDefaults() {
 	if o.WebhookMux == nil {
@@ -165,6 +169,8 @@ func (s *DefaultServer) setDefaults() {
 func (*DefaultServer) NeedLeaderElection() bool {
 	return false
 }
+
+// zhou: README,
 
 // Register marks the given webhook as being served at the given path.
 // It panics if two hooks are registered on the same path.

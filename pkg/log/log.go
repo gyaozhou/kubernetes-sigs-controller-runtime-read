@@ -45,6 +45,20 @@ import (
 	"github.com/go-logr/logr"
 )
 
+// zhou: !!! Here explains the whole logic behind the design.
+//       1. "logr" provide a common set methods to user, and implement a adaptor layer for each
+//          kind logger. e.g. "go-logr/zapr" for "zap".
+//          "go-logr/logr" "type LogSink interface" defines the adaptor layer's interface.
+//          What controller-runtime did, is just a wrapper.
+//       2. Before application invoke "SetLogger()" to set backing logger, code before it and
+//          "init()" of other modules may already perform WithValues()/WithName().
+//       3. So, this module global variabel will define a "DelegatingLogSink" to preserve this
+//          data. And when user SetLogger(), it could be applied to actual logger then.
+//       4. But it will consume lots of memory if waiting for SetLogger() too long time.
+//       5. So, 30s is the threshold to give up waiting, and apply them to a "NullLogSink{}"
+
+// zhou: set the concrete logging implmentation which specified by user.
+
 // SetLogger sets a concrete logging implementation for all deferred Loggers.
 func SetLogger(l logr.Logger) {
 	logFullfilled.Store(true)
@@ -67,6 +81,7 @@ func eventuallyFulfillRoot() {
 				bytes.Replace(stack, []byte{'\n'}, sep, stackLines-1),
 			)
 			SetLogger(logr.New(NullLogSink{}))
+
 		}
 	}
 }
@@ -84,8 +99,13 @@ var (
 	rootLog, rootLogCreated = func() (*delegatingLogSink, time.Time) {
 		return newDelegatingLogSink(NullLogSink{}), time.Now()
 	}()
+
+	// zhou: it's global default "logr" instance. Application could create it's own instance.
+
 	Log = logr.New(rootLog)
 )
+
+// zhou: extract logger from context's value.
 
 // FromContext returns a logger with predefined values from a context.Context.
 func FromContext(ctx context.Context, keysAndValues ...interface{}) logr.Logger {
@@ -97,6 +117,8 @@ func FromContext(ctx context.Context, keysAndValues ...interface{}) logr.Logger 
 	}
 	return log.WithValues(keysAndValues...)
 }
+
+// zhou: embed the logger as value into context
 
 // IntoContext takes a context and sets the logger as one of its values.
 // Use FromContext function to retrieve the logger.

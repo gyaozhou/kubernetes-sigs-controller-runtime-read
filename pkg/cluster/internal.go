@@ -31,14 +31,17 @@ import (
 	intrec "sigs.k8s.io/controller-runtime/pkg/internal/recorder"
 )
 
+// zhou: implement "Cluster interface"
+//
+//	The implemented methods just like accessor, no special logic.
 type cluster struct {
 	// config is the rest.config used to talk to the apiserver.  Required.
 	config *rest.Config
 
 	httpClient *http.Client
-	scheme     *runtime.Scheme
+	scheme     *runtime.Scheme // zhou: default value is "scheme.scheme"
 	cache      cache.Cache
-	client     client.Client
+	client     client.Client // zhou: inited by "DefaultNewClient()" ???
 
 	// apiReader is the reader that will make requests to the api server and not the cache.
 	apiReader client.Reader
@@ -50,6 +53,8 @@ type cluster struct {
 	// recorderProvider is used to generate event recorders that will be injected into Controllers
 	// (and EventHandlers, Sources and Predicates).
 	recorderProvider *intrec.Provider
+
+	// zhou:
 
 	// mapper is used to map resources to kind, and map kind and version.
 	mapper meta.RESTMapper
@@ -98,6 +103,8 @@ func (c *cluster) GetAPIReader() client.Reader {
 func (c *cluster) GetLogger() logr.Logger {
 	return c.logger
 }
+
+// zhou: README,
 
 func (c *cluster) Start(ctx context.Context) error {
 	defer c.recorderProvider.Stop(ctx)

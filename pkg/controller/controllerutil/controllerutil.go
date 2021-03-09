@@ -62,6 +62,8 @@ func WithBlockOwnerDeletion(blockOwnerDeletion bool) OwnerReferenceOption {
 	}
 }
 
+// zhou:
+
 // SetControllerReference sets owner as a Controller OwnerReference on controlled.
 // This is used for garbage collection of the controlled object and for
 // reconciling the owner object on changes to controlled (with a Watch + EnqueueRequestForOwner).
@@ -294,6 +296,8 @@ const ( // They should complete the sentence "Deployment default/foo has been ..
 	OperationResultUpdatedStatusOnly OperationResult = "updatedStatusOnly"
 )
 
+// zhou: create if not exist, update if not matching disired.
+
 // CreateOrUpdate attempts to fetch the given object from the Kubernetes cluster.
 // If the object didn't exist, MutateFn will be called, and it will be created.
 // If the object did exist, MutateFn will be called, and if it changed the
@@ -319,6 +323,7 @@ const ( // They should complete the sentence "Deployment default/foo has been ..
 // discarded.
 func CreateOrUpdate(ctx context.Context, c client.Client, obj client.Object, f MutateFn) (OperationResult, error) {
 	key := client.ObjectKeyFromObject(obj)
+
 	if err := c.Get(ctx, key, obj); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return OperationResultNone, err
@@ -332,6 +337,7 @@ func CreateOrUpdate(ctx context.Context, c client.Client, obj client.Object, f M
 		if err := c.Create(ctx, obj); err != nil {
 			return OperationResultNone, err
 		}
+
 		return OperationResultCreated, nil
 	}
 
@@ -351,6 +357,8 @@ func CreateOrUpdate(ctx context.Context, c client.Client, obj client.Object, f M
 	}
 	return OperationResultUpdated, nil
 }
+
+// zhou: patch is more suitable for large resoruce.
 
 // CreateOrPatch attempts to fetch the given object from the Kubernetes cluster.
 // If the object didn't exist, MutateFn will be called, and it will be created.

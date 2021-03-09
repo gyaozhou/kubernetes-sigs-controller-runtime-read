@@ -16,6 +16,7 @@
 *.swp
 *.swo
 *~
+cscope.files
 
 # Vscode files
 .vscode

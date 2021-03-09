@@ -35,6 +35,9 @@ import (
 	intrec "sigs.k8s.io/controller-runtime/pkg/internal/recorder"
 )
 
+// zhou: "Start()" by Manager as like controllers. "Cluster" is used to handle talking with
+//       apiserver, e.g. cache
+
 // Cluster provides various methods to interact with a cluster.
 type Cluster interface {
 	// GetHTTPClient returns an HTTP client that can be used to talk to the apiserver
@@ -48,6 +51,8 @@ type Cluster interface {
 
 	// GetScheme returns an initialized Scheme
 	GetScheme() *runtime.Scheme
+
+	// zhou: Used by user controller to get "NewClient" created cached client.
 
 	// GetClient returns a client configured with the Config. This client may
 	// not be a fully "direct" client -- it may read from a cache, for
@@ -64,6 +69,9 @@ type Cluster interface {
 	// GetRESTMapper returns a RESTMapper
 	GetRESTMapper() meta.RESTMapper
 
+	// zhou: used to get client for reading from apiserver directly.
+	//       By this way, it could avoid cache out of sync for objects just created/updated.
+
 	// GetAPIReader returns a reader that will be configured to use the API server directly.
 	// This should be used sparingly and only when the cached client does not fit your
 	// use case.
@@ -75,10 +83,15 @@ type Cluster interface {
 
 // Options are the possible options that can be configured for a Cluster.
 type Options struct {
+	// zhou: client will use default value "scheme.Scheme"
+	//       "staging/src/k8s.io/client-go/kubernetes/scheme/register.go"
+
 	// Scheme is the scheme used to resolve runtime.Objects to GroupVersionKinds / Resources
 	// Defaults to the kubernetes/client-go scheme.Scheme, but it's almost always better
 	// idea to pass your own scheme in.  See the documentation in pkg/scheme for more information.
 	Scheme *runtime.Scheme
+
+	// zhou: client will use default value "apiutil.NewDynamicRESTMapper"
 
 	// MapperProvider provides the rest mapper used to map go types to Kubernetes APIs
 	MapperProvider func(c *rest.Config, httpClient *http.Client) (meta.RESTMapper, error)
@@ -96,6 +109,8 @@ type Options struct {
 	// By default, the cache will watch and list requested objects in all namespaces.
 	Cache cache.Options
 
+	// zhou: default value "cache.New()".
+
 	// NewCache is the function that will create the cache to be used
 	// by the manager. If not set this will use the default new cache function.
 	//
@@ -109,6 +124,8 @@ type Options struct {
 	// Client is the client.Options that will be used to create the default Client.
 	// By default, the client will use the cache for reads and direct calls for writes.
 	Client client.Options
+
+	// zhou: default value "DefaultNewClient()"
 
 	// NewClient is the func that creates the client to be used by the manager.
 	// If not set this will create a Client backed by a Cache for read operations
@@ -141,6 +158,8 @@ type Options struct {
 // Option can be used to manipulate Options.
 type Option func(*Options)
 
+// zhou: "opts" are slice of functions which accept parameter "cluster.Options"
+
 // New constructs a brand new cluster.
 func New(config *rest.Config, opts ...Option) (Cluster, error) {
 	if config == nil {
@@ -154,6 +173,8 @@ func New(config *rest.Config, opts ...Option) (Cluster, error) {
 		config.UserAgent = rest.DefaultKubernetesUserAgent()
 	}
 
+	// zhou: set "cluster.Options"
+
 	options := Options{}
 	for _, opt := range opts {
 		opt(&options)
@@ -164,12 +185,15 @@ func New(config *rest.Config, opts ...Option) (Cluster, error) {
 		return nil, err
 	}
 
+	// zhou: default method "apiutil.NewDynamicRESTMapper(config)"
 	// Create the mapper provider
 	mapper, err := options.MapperProvider(config, options.HTTPClient)
 	if err != nil {
 		options.Logger.Error(err, "Failed to get API Group-Resources")
 		return nil, err
 	}
+
+	// zhou: "cache.New()"
 
 	// Create the cache for the cached read client and registering informers
 	cacheOpts := options.Cache
@@ -215,6 +239,8 @@ func New(config *rest.Config, opts ...Option) (Cluster, error) {
 		return nil, err
 	}
 
+	// zhou: "DefaultNewClient()", create read cached client. why using name "writeObj"?
+
 	// Create the API Reader, a client with no cache.
 	clientReader, err := client.New(config, client.Options{
 		HTTPClient: options.HTTPClient,
@@ -233,6 +259,7 @@ func New(config *rest.Config, opts ...Option) (Cluster, error) {
 		return nil, err
 	}
 
+	// zhou: "cluster struct" is just accessor, used to get the corresponding values assigned here.
 	return &cluster{
 		config:           originalConfig,
 		httpClient:       options.HTTPClient,
@@ -259,6 +286,7 @@ func setOptionsDefaults(options Options, config *rest.Config) (Options, error) {
 
 	// Use the Kubernetes client-go scheme if none is specified
 	if options.Scheme == nil {
+		// zhou: what's the difference between user create scheme and "scheme.Scheme"
 		options.Scheme = scheme.Scheme
 	}
 

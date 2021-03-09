@@ -31,6 +31,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
+// zhou: manager of clients.
+//       here using rest client, each GVK owns a client.
+//       Here cache means "shared" client for each users, the GVK corresponding client will be
+//       cached for other users using.
+
 // clientRestResources creates and stores rest clients and metadata for Kubernetes types.
 type clientRestResources struct {
 	// httpClient is the http client to use for requests
@@ -54,6 +59,8 @@ type clientRestResources struct {
 	unstructuredResourceByType map[schema.GroupVersionKind]*resourceMeta
 	mu                         sync.RWMutex
 }
+
+// zhou: create new resource
 
 // newResource maps obj to a Kubernetes Resource and constructs a client for that Resource.
 // If the object is a list, the resource represents the item's type instead.
@@ -84,6 +91,9 @@ type applyConfiguration interface {
 	GetKind() *string
 	GetAPIVersion() *string
 }
+
+// zhou: check whether already created before, otherwise create a new one.
+//       Handle both typed and unstructured client.
 
 // getResource returns the resource meta information for the given type of object.
 // If the object is a list, the resource represents the item's type instead.
@@ -140,9 +150,12 @@ func (c *clientRestResources) getResource(obj any) (*resourceMeta, error) {
 	if err != nil {
 		return nil, err
 	}
+	// zhou: added to client cache
 	resourceByType[gvk] = r
 	return r, err
 }
+
+// zhou: used by typed and unstructured client.
 
 // getObjMeta returns objMeta containing both type and object metadata and state.
 func (c *clientRestResources) getObjMeta(obj any) (*objMeta, error) {

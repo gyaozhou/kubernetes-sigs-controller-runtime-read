@@ -24,6 +24,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+// zhou: README,
+
 // NewDryRunClient wraps an existing client and enforces DryRun mode
 // on all mutating api calls.
 func NewDryRunClient(c Client) Client {

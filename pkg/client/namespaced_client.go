@@ -28,6 +28,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
+// zhou: what's the different between "mgr.GetClient()" ?
+
 // NewNamespacedClient wraps an existing client enforcing the namespace value.
 // All functions using this client will have the same namespace declared here.
 func NewNamespacedClient(c Client, ns string) Client {

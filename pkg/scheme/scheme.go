@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// zhou: !!! Why "examples/builtins/main.go" don't perform schema operations?
+
 // Package scheme contains utilities for gradually building Schemes,
 // which contain information associating Go types with Kubernetes
 // groups, versions, and kinds.
@@ -59,15 +61,23 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+// zhou: apimachinery
+
 // Builder builds a new Scheme for mapping go types to Kubernetes GroupVersionKinds.
 type Builder struct {
+	// zhou: e.g. 	GroupVersion = schema.GroupVersion{Group: "group.domain", Version: "v1"}
 	GroupVersion schema.GroupVersion
+	// zhou: type SchemeBuilder []func(*Scheme) error
 	runtime.SchemeBuilder
 }
 
+// zhou: e.g. used in func init() as SchemeBuilder.Register(&ChaosPod{}, &ChaosPodList{})
+
 // Register adds one or more objects to the SchemeBuilder so they can be added to a Scheme.  Register mutates bld.
 func (bld *Builder) Register(object ...runtime.Object) *Builder {
+	// zhou: the registered functions will be invoked when "AddToScheme()".
 	bld.SchemeBuilder.Register(func(scheme *runtime.Scheme) error {
+		// zhou: solid worker
 		scheme.AddKnownTypes(bld.GroupVersion, object...)
 		metav1.AddToGroupVersion(scheme, bld.GroupVersion)
 		return nil
@@ -81,10 +91,14 @@ func (bld *Builder) RegisterAll(b *Builder) *Builder {
 	return bld
 }
 
+// zhou: README, finally add to scheme.
+
 // AddToScheme adds all registered types to s.
 func (bld *Builder) AddToScheme(s *runtime.Scheme) error {
 	return bld.SchemeBuilder.AddToScheme(s)
 }
+
+// zhou: create a scheme and add to it if no external scheme created.
 
 // Build returns a new Scheme containing the registered types.
 func (bld *Builder) Build() (*runtime.Scheme, error) {

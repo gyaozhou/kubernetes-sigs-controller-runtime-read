@@ -117,6 +117,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	// zhou: "controller.New()" is lower than "NewControllerManagedBy()"
 	err = ctrl.NewControllerManagedBy(mgr).
 		For(&api.ChaosPod{}).
 		Owns(&corev1.Pod{}).

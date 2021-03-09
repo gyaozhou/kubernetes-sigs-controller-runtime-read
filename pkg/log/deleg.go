@@ -22,6 +22,8 @@ import (
 	"github.com/go-logr/logr"
 )
 
+// zhou: like a callback function list, which could be applied to logger later.
+
 // loggerPromise knows how to populate a concrete logr.Logger
 // with options, given an actual base logger later on down the line.
 type loggerPromise struct {
@@ -60,6 +62,8 @@ func (p *loggerPromise) WithValues(l *delegatingLogSink, tags ...interface{}) *l
 	return res
 }
 
+// zhou: README, apply preserved name/value to actual logger.
+
 // Fulfill instantiates the Logger with the provided logger.
 func (p *loggerPromise) Fulfill(parentLogSink logr.LogSink) {
 	sink := parentLogSink
@@ -84,16 +88,25 @@ func (p *loggerPromise) Fulfill(parentLogSink logr.LogSink) {
 	}
 }
 
+// zhou: implements interface "logr.LogSink". so it could be used as logr backing logger.
+
 // delegatingLogSink is a logsink that delegates to another logr.LogSink.
 // If the underlying promise is not nil, it registers calls to sub-loggers with
 // the logging factory to be populated later, and returns a new delegating
 // logger.  It expects to have *some* logr.Logger set at all times (generally
 // a no-op logger before the promises are fulfilled).
 type delegatingLogSink struct {
-	lock    sync.RWMutex
+	lock sync.RWMutex
+
+	// zhou: backing logger's backing logger
+
 	logger  logr.LogSink
 	promise *loggerPromise
-	info    logr.RuntimeInfo
+
+	// zhou: "RuntimeInfo holds information that the logr "core" library knows which
+	//        LogSinks might want to know."
+
+	info logr.RuntimeInfo
 }
 
 // Init implements logr.LogSink.
@@ -142,12 +155,15 @@ func (l *delegatingLogSink) Error(err error, msg string, keysAndValues ...interf
 	l.logger.Error(err, msg, keysAndValues...)
 }
 
+// zhou: with the specified name element added to the Logger's name
+//
 // WithName provides a new Logger with the name appended.
 func (l *delegatingLogSink) WithName(name string) logr.LogSink {
 	eventuallyFulfillRoot()
 	l.lock.RLock()
 	defer l.lock.RUnlock()
 
+	// zhou: if logger is already set, pass to logger to handle it.
 	if l.promise == nil {
 		sink := l.logger.WithName(name)
 		if withCallDepth, ok := sink.(logr.CallDepthLogSink); ok {
@@ -156,6 +172,7 @@ func (l *delegatingLogSink) WithName(name string) logr.LogSink {
 		return sink
 	}
 
+	// zhou: otherwise, the "promise" has to handle it.
 	res := &delegatingLogSink{logger: l.logger}
 	promise := l.promise.WithName(res, name)
 	res.promise = promise
@@ -163,6 +180,8 @@ func (l *delegatingLogSink) WithName(name string) logr.LogSink {
 	return res
 }
 
+// zhou: with additional key/value pairs.
+//
 // WithValues provides a new Logger with the tags appended.
 func (l *delegatingLogSink) WithValues(tags ...interface{}) logr.LogSink {
 	eventuallyFulfillRoot()
@@ -195,6 +214,8 @@ func (l *delegatingLogSink) Fulfill(actual logr.LogSink) {
 		l.promise.Fulfill(actual)
 	}
 }
+
+// zhou: create logger instance of "DelegatingLogSink"
 
 // newDelegatingLogSink constructs a new DelegatingLogSink which uses
 // the given logger before its promise is fulfilled.

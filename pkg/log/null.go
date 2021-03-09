@@ -38,6 +38,8 @@ func (NullLogSink) Info(_ int, _ string, _ ...interface{}) {
 	// Do nothing.
 }
 
+// zhou: always return false since no output.
+
 // Enabled implements logr.InfoLogger.
 func (NullLogSink) Enabled(level int) bool {
 	return false
