@@ -36,13 +36,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+// zhou: README, implement controller processing loop.
+
 // Controller implements controller.Controller.
 type Controller struct {
 	// Name is used to uniquely identify a Controller in tracing, logging and monitoring.  Name is required.
 	Name string
 
+	// zhou: number of concurrent Reconciles for this controller.
+
 	// MaxConcurrentReconciles is the maximum number of concurrent Reconciles which can be run. Defaults to 1.
 	MaxConcurrentReconciles int
+
+	// zhou: user implementation of "Reconciler interface"
 
 	// Reconciler is a function that can be called at any time with the Name / Namespace of an object and
 	// ensures that the state of the system matches the state specified in the object.
@@ -52,10 +58,21 @@ type Controller struct {
 	// RateLimiter is used to limit how frequently requests may be queued into the work queue.
 	RateLimiter ratelimiter.RateLimiter
 
+	// zhou: callback function return "type RateLimitingInterface interface".
+	//       Like std:bind() customize function with specify parameters.
+	//       The default is,
+	// 		 MakeQueue: func() workqueue.RateLimitingInterface {
+	//   	 	return workqueue.NewNamedRateLimitingQueue(options.RateLimiter, name)
+	//	     },
+
 	// NewQueue constructs the queue for this controller once the controller is ready to start.
 	// This is a func because the standard Kubernetes work queues start themselves immediately, which
 	// leads to goroutine leaks if something calls controller.New repeatedly.
 	NewQueue func(controllerName string, rateLimiter ratelimiter.RateLimiter) workqueue.RateLimitingInterface
+
+	// zhou: created by "MakeQueue()" when controller started.
+	//       When get interesting event from Informers, insert it into this queue.
+	//       And user's Reconcile() will consume it.
 
 	// Queue is an listeningQueue that listens for events from Informers and adds object keys to
 	// the Queue for processing
@@ -78,6 +95,8 @@ type Controller struct {
 	// Defaults to 2 minutes if not set.
 	CacheSyncTimeout time.Duration
 
+	// zhou: Owns()/Watches() related object
+
 	// startWatches maintains a list of sources, handlers, and predicates to start when the controller is started.
 	startWatches []source.Source
 
@@ -93,6 +112,8 @@ type Controller struct {
 	// LeaderElected indicates whether the controller is leader elected or always running.
 	LeaderElected *bool
 }
+
+// zhou:
 
 // Reconcile implements reconcile.Reconciler.
 func (c *Controller) Reconcile(ctx context.Context, req reconcile.Request) (_ reconcile.Result, err error) {
@@ -111,13 +132,22 @@ func (c *Controller) Reconcile(ctx context.Context, req reconcile.Request) (_ re
 			panic(r)
 		}
 	}()
+
+	// zhou: anyway, the "ctx" parameter of user's Reconcile(), already includes the logger with values.
+	//       There is still no controller name information.
+
 	return c.Do.Reconcile(ctx, req)
 }
+
+// zhou: implement "type Controller interface".
+//       Watch dedicated resource
 
 // Watch implements controller.Controller.
 func (c *Controller) Watch(src source.Source) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	// zhou: we can add new resource to watch when the controller is running
 
 	// Controller hasn't started yet, store the watches locally and return.
 	//
@@ -128,6 +158,12 @@ func (c *Controller) Watch(src source.Source) error {
 	}
 
 	c.LogConstructor(nil).Info("Starting EventSource", "source", src)
+
+	// zhou: start to watch immediately in case of controller already started.
+	//       Refer to "type source interface {}.Start", should be called only by
+	//       the Controller to register an EventHandler with the Informer to
+	//       enqueue reconcile.Requests.
+
 	return src.Start(c.ctx, c.Queue)
 }
 
@@ -138,6 +174,9 @@ func (c *Controller) NeedLeaderElection() bool {
 	}
 	return *c.LeaderElected
 }
+
+// zhou: implement "type Controller interface".
+//       Create informers for watching resources. Then process event queue.
 
 // Start implements controller.Controller.
 func (c *Controller) Start(ctx context.Context) error {
@@ -172,6 +211,8 @@ func (c *Controller) Start(ctx context.Context) error {
 		for _, watch := range c.startWatches {
 			c.LogConstructor(nil).Info("Starting EventSource", "source", fmt.Sprintf("%s", watch))
 
+			// zhou: create informer for this GVK if not yet created in backgroud goroutine.
+
 			if err := watch.Start(ctx, c.Queue); err != nil {
 				return err
 			}
@@ -179,6 +220,8 @@ func (c *Controller) Start(ctx context.Context) error {
 
 		// Start the SharedIndexInformer factories to begin populating the SharedIndexInformer caches
 		c.LogConstructor(nil).Info("Starting Controller")
+
+		// zhou: wait for all informer's cache are synced in backgroud !!!
 
 		for _, watch := range c.startWatches {
 			syncingSource, ok := watch.(source.SyncingSource)
@@ -211,12 +254,17 @@ func (c *Controller) Start(ctx context.Context) error {
 		// which won't be garbage collected if we hold a reference to it.
 		c.startWatches = nil
 
+		// zhou: MaxConcurrentReconciles worker to handle Reconciler
+
 		// Launch workers to process resources
 		c.LogConstructor(nil).Info("Starting workers", "worker count", c.MaxConcurrentReconciles)
 		wg.Add(c.MaxConcurrentReconciles)
 		for i := 0; i < c.MaxConcurrentReconciles; i++ {
 			go func() {
 				defer wg.Done()
+				// zhou: multi-threads of the same controller will never invoked concurrently with the same
+				//       object.
+
 				// Run a worker thread that just dequeues items, processes them, and marks them done.
 				// It enforces that the reconcileHandler is never invoked concurrently with the same object.
 				for c.processNextWorkItem(ctx) {
@@ -238,14 +286,20 @@ func (c *Controller) Start(ctx context.Context) error {
 	return nil
 }
 
+// zhou: dequeue item from queue, executed in each goroutine,
+
 // processNextWorkItem will read a single work item off the workqueue and
 // attempt to process it, by calling the reconcileHandler.
 func (c *Controller) processNextWorkItem(ctx context.Context) bool {
+	// zhou: pop from queue
 	obj, shutdown := c.Queue.Get()
+	// zhou: workqueue stop working
 	if shutdown {
 		// Stop working
 		return false
 	}
+
+	// zhou: mark as done when returned.
 
 	// We call Done here so the workqueue knows we have finished
 	// processing this item. We also must remember to call Forget if we
@@ -258,6 +312,7 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 	ctrlmetrics.ActiveWorkers.WithLabelValues(c.Name).Add(1)
 	defer ctrlmetrics.ActiveWorkers.WithLabelValues(c.Name).Add(-1)
 
+	// zhou: handle object
 	c.reconcileHandler(ctx, obj)
 	return true
 }
@@ -278,6 +333,8 @@ func (c *Controller) initMetrics() {
 	ctrlmetrics.ReconcileTotal.WithLabelValues(c.Name, labelSuccess).Add(0)
 	ctrlmetrics.WorkerCount.WithLabelValues(c.Name).Set(float64(c.MaxConcurrentReconciles))
 }
+
+// zhou: README, invoke user's Reconcile() and handle return value.
 
 func (c *Controller) reconcileHandler(ctx context.Context, obj interface{}) {
 	// Update metrics after processing each item
@@ -302,8 +359,12 @@ func (c *Controller) reconcileHandler(ctx context.Context, obj interface{}) {
 	reconcileID := uuid.NewUUID()
 
 	log = log.WithValues("reconcileID", reconcileID)
+	// zhou: "ctx" will be passed to user's Reconcile(), already contains a logger with info above.
+
 	ctx = logf.IntoContext(ctx, log)
 	ctx = addReconcileID(ctx, reconcileID)
+
+	// zhou: invoke "Controller.Reconcile()", which will invoke user's Reconcile().
 
 	// RunInformersAndControllers the syncHandler, passing it the Namespace/Name string of the
 	// resource to be synced.
@@ -314,6 +375,10 @@ func (c *Controller) reconcileHandler(ctx context.Context, obj interface{}) {
 		if errors.Is(err, reconcile.TerminalError(nil)) {
 			ctrlmetrics.TerminalReconcileErrors.WithLabelValues(c.Name).Inc()
 		} else {
+
+			// zhou: when return error by user, re-enqueue. But we have to limit
+			//       the rate to avoid repeatly error.
+
 			c.Queue.AddRateLimited(req)
 		}
 		ctrlmetrics.ReconcileErrors.WithLabelValues(c.Name).Inc()

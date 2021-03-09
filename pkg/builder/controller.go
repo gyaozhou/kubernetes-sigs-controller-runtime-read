@@ -36,6 +36,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+// zhou: the builder methods implemeted in this package, will return "* Builder".
+//       By this way, we can use it like "operator <<", build the process one by one.
+//       The package manager and controller are building blocks, which are wrapped by
+//       methods in this package.
+
 // Supporting mocking out functions for testing.
 var newController = controller.New
 var getGvk = apiutil.GVKForObject
@@ -51,6 +56,8 @@ const (
 	projectAsMetadata
 )
 
+// zhou: core data for controller interacting with others
+
 // Builder builds a Controller.
 type Builder struct {
 	forInput         ForInput
@@ -58,24 +65,34 @@ type Builder struct {
 	rawSources       []source.Source
 	watchesInput     []WatchesInput
 	mgr              manager.Manager
-	globalPredicates []predicate.Predicate
-	ctrl             controller.Controller
+	globalPredicates []predicate.Predicate // zhou: apply to For/Owns/Watch objects
+	ctrl             controller.Controller // zhou: controller struct
 	ctrlOptions      controller.Options
 	name             string
 }
+
+// zhou: start to build controller
 
 // ControllerManagedBy returns a new controller builder that will be started by the provided Manager.
 func ControllerManagedBy(m manager.Manager) *Builder {
 	return &Builder{mgr: m}
 }
 
+// zhou: used by For()
+
 // ForInput represents the information set by the For method.
 type ForInput struct {
+	// zhou: example object indicating GVK, each controller can only assign once.
 	object           client.Object
 	predicates       []predicate.Predicate
 	objectProjection objectProjection
 	err              error
 }
+
+// zhou: used to define the controller's reconcile object GVK. The queue which controller need to
+//       handle, only preserve object namespace/name, so it can only correspond one object type.
+//       "For()" == "Watches(&source.Kind{Type: apiType}, &handler.EnqueueRequestForObject{})",
+//       watch it and enqueue it without any conversion.
 
 // For defines the type of Object being *reconciled*, and configures the ControllerManagedBy to respond to create / delete /
 // update events by *reconciling the object*.
@@ -88,8 +105,15 @@ func (blder *Builder) For(object client.Object, opts ...ForOption) *Builder {
 	}
 	input := ForInput{object: object}
 	for _, opt := range opts {
+
+		// zhou: Differnt "opt" may assign different fields of "ForInput struct",
+		//       For the same field, only the last one takes effect.
+		//       Here only implements "input.predicates = opt.predicates"
+
 		opt.ApplyToFor(&input)
 	}
+
+	// zhou: only one "For()"
 
 	blder.forInput = input
 	return blder
@@ -102,6 +126,12 @@ type OwnsInput struct {
 	predicates       []predicate.Predicate
 	objectProjection objectProjection
 }
+
+// zhou: watch specified resouce, its owner might be current controller is reconciling.
+//       e.g. controller is reconcile kind A. Some objects of kind B are created and set
+//       ownerreference by kind A. Once these objects of kind B changes, the controller need
+//       to reconcile since objects of kind A depends on it.
+//       It equal with "Watches(&source.Kind{Type: <ForType-forInput>}, &handler.EnqueueRequestForOwner{OwnerType: apiType, IsController: true})"
 
 // Owns defines types of Objects being *generated* by the ControllerManagedBy, and configures the ControllerManagedBy to respond to
 // create / delete / update events by *reconciling the owner object*.
@@ -116,7 +146,7 @@ func (blder *Builder) Owns(object client.Object, opts ...OwnsOption) *Builder {
 	for _, opt := range opts {
 		opt.ApplyToOwns(&input)
 	}
-
+	// zhou: many Owns()
 	blder.ownsInput = append(blder.ownsInput, input)
 	return blder
 }
@@ -180,6 +210,8 @@ func (blder *Builder) WatchesMetadata(object client.Object, eventHandler handler
 	return blder.Watches(object, eventHandler, opts...)
 }
 
+// zhou: lower-level function comparing to For() and Owns(), but more flexible with user's eventhandler.
+
 // WatchesRawSource exposes the lower-level ControllerManagedBy Watches functions through the builder.
 // Specified predicates are registered only for given source.
 //
@@ -192,6 +224,8 @@ func (blder *Builder) WatchesRawSource(src source.Source) *Builder {
 
 	return blder
 }
+
+// zhou: set "globalPredicts"
 
 // WithEventFilter sets the event filters, to filter which create/update/delete/generic events eventually
 // trigger reconciliations. For example, filtering on whether the resource version has changed.
@@ -224,11 +258,15 @@ func (blder *Builder) Named(name string) *Builder {
 	return blder
 }
 
+// zhou: set the "Reconciler interface" implementater, and complete the build process.
+
 // Complete builds the Application Controller.
 func (blder *Builder) Complete(r reconcile.Reconciler) error {
 	_, err := blder.Build(r)
 	return err
 }
+
+// zhou: invoked by Builder.Complete(), to create a controller and add to management.
 
 // Build builds the Application Controller and returns the Controller it created.
 func (blder *Builder) Build(r reconcile.Reconciler) (controller.Controller, error) {
@@ -242,10 +280,15 @@ func (blder *Builder) Build(r reconcile.Reconciler) (controller.Controller, erro
 		return nil, blder.forInput.err
 	}
 
+	// zhou: create a new controller, with user implemented "Reconciler interface".
+	//       Until now, the controller still not running. Manager will start them when cache was synced.
+
 	// Set the ControllerManagedBy
 	if err := blder.doController(r); err != nil {
 		return nil, err
 	}
+
+	// zhou: tell informer that watch resource changes.
 
 	// Set the Watch
 	if err := blder.doWatch(); err != nil {
@@ -255,6 +298,7 @@ func (blder *Builder) Build(r reconcile.Reconciler) (controller.Controller, erro
 	return blder.ctrl, nil
 }
 
+// zhou: transformation as needed.
 func (blder *Builder) project(obj client.Object, proj objectProjection) (client.Object, error) {
 	switch proj {
 	case projectAsNormal:
@@ -272,6 +316,8 @@ func (blder *Builder) project(obj client.Object, proj objectProjection) (client.
 	}
 }
 
+// zhou: README, add reconcile type to watch list, like invoke Controller.Watch() directly.
+
 func (blder *Builder) doWatch() error {
 	// Reconcile type
 	if blder.forInput.object != nil {
@@ -279,10 +325,16 @@ func (blder *Builder) doWatch() error {
 		if err != nil {
 			return err
 		}
+
+		// zhou: enqueue object itself, no need extra handle.
+
 		hdler := &handler.EnqueueRequestForObject{}
 		allPredicates := append([]predicate.Predicate(nil), blder.globalPredicates...)
 		allPredicates = append(allPredicates, blder.forInput.predicates...)
 		src := source.Kind(blder.mgr.GetCache(), obj, hdler, allPredicates...)
+
+		// zhou: "internal/controller/Controller.Watch()"
+
 		if err := blder.ctrl.Watch(src); err != nil {
 			return err
 		}
@@ -347,8 +399,15 @@ func (blder *Builder) getControllerName(gvk schema.GroupVersionKind, hasGVK bool
 	return strings.ToLower(gvk.Kind), nil
 }
 
+// zhou: create a new controller
+
 func (blder *Builder) doController(r reconcile.Reconciler) error {
+
+	// zhou: set when manager creation.
+
 	globalOpts := blder.mgr.GetControllerOptions()
+
+	// zhou: set when controller builder.
 
 	ctrlOptions := blder.ctrlOptions
 	if ctrlOptions.Reconciler != nil && r != nil {
@@ -370,10 +429,12 @@ func (blder *Builder) doController(r reconcile.Reconciler) error {
 		}
 	}
 
+	// zhou: if controller option no MaxConcurrntRreconciles setting, find it in globalOpts.
+
 	// Setup concurrency.
 	if ctrlOptions.MaxConcurrentReconciles == 0 && hasGVK {
 		groupKind := gvk.GroupKind().String()
-
+		// zhou: use manager global setting.
 		if concurrency, ok := globalOpts.GroupKindConcurrency[groupKind]; ok && concurrency > 0 {
 			ctrlOptions.MaxConcurrentReconciles = concurrency
 		}
@@ -414,6 +475,8 @@ func (blder *Builder) doController(r reconcile.Reconciler) error {
 			return log
 		}
 	}
+
+	// zhou: alias of "pkg/controller/controller.New()"
 
 	// Build the controller and return.
 	blder.ctrl, err = newController(controllerName, blder.mgr, ctrlOptions)

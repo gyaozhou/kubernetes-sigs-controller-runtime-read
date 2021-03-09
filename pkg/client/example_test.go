@@ -56,6 +56,8 @@ func ExampleNew() {
 	}
 }
 
+// zhou: README,
+
 // This example shows how to use the client with typed and unstructured objects to retrieve an object.
 func ExampleClient_get() {
 	// Using a typed object.

@@ -55,6 +55,9 @@ var _ Predicate = or[client.Object]{}
 var _ Predicate = and[client.Object]{}
 var _ Predicate = not[client.Object]{}
 
+// zhou: "type Funcs struct {}" implements "type Predicate interface {}"
+//       But user have to populate its fields.
+
 // Funcs is a function that implements Predicate.
 type Funcs = TypedFuncs[client.Object]
 
@@ -72,6 +75,8 @@ type TypedFuncs[T any] struct {
 	// Generic returns true if the Generic event should be processed
 	GenericFunc func(event.TypedGenericEvent[T]) bool
 }
+
+// zhou: if user doesn't provide implementation, the default behavior return true always.
 
 // Create implements Predicate.
 func (p TypedFuncs[T]) Create(e event.TypedCreateEvent[T]) bool {
@@ -164,6 +169,10 @@ func (ResourceVersionChangedPredicate) Update(e event.UpdateEvent) bool {
 	return e.ObjectNew.GetResourceVersion() != e.ObjectOld.GetResourceVersion()
 }
 
+// zhou: ignore when metadata.generation is not changed.
+//       Only write to spec will trigger meta.generation increased.
+//       So, metadata and status changes will not ignore in this case.
+
 // GenerationChangedPredicate implements a default update predicate function on Generation change.
 //
 // This predicate will skip update events that have no change in the object's metadata.generation field.
@@ -202,6 +211,8 @@ type TypedGenerationChangedPredicate[T metav1.Object] struct {
 	TypedFuncs[T]
 }
 
+// zhou: override the "Funcs.Update()"
+
 // Update implements default UpdateEvent filter for validating generation change.
 func (TypedGenerationChangedPredicate[T]) Update(e event.TypedUpdateEvent[T]) bool {
 	if isNil(e.ObjectOld) {
@@ -215,6 +226,8 @@ func (TypedGenerationChangedPredicate[T]) Update(e event.TypedUpdateEvent[T]) bo
 
 	return e.ObjectNew.GetGeneration() != e.ObjectOld.GetGeneration()
 }
+
+// zhou: take care annotation only.
 
 // AnnotationChangedPredicate implements a default update predicate function on annotation change.
 //

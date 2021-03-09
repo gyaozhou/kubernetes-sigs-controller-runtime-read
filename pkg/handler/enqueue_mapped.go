@@ -25,6 +25,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+// zhou: enqueue the mapped object of what we watched
+//       e.g. when the pod changed, the predefiend objects of the pod will be enqueued.
+
 // MapFunc is the signature required for enqueueing requests from a generic function.
 // This type is usually used with EnqueueRequestsFromMapFunc when registering an event handler.
 type MapFunc = TypedMapFunc[client.Object]
@@ -34,6 +37,10 @@ type MapFunc = TypedMapFunc[client.Object]
 //
 // TypedMapFunc is experimental and subject to future change.
 type TypedMapFunc[T any] func(context.Context, T) []reconcile.Request
+
+// zhou: used to map request one to another.
+//       For example, CRD A refer to CRD B, when CRD B changed, we want CRD A could be reconcile.
+//       In this case, we can let CRD A's controller to also watch and transform CRD B request to A request.
 
 // EnqueueRequestsFromMapFunc enqueues Requests by running a transformation function that outputs a collection
 // of reconcile.Requests on each Event.  The reconcile.Requests may be for an arbitrary set of objects

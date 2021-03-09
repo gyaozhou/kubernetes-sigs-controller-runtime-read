@@ -71,6 +71,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	// zhou: setup webhook server, and register it.
+	//       In fact, the registration is creating objects of type
+	//       "ValidatingWebhookConfiguration" and "MutatingWebhookConfiguration"
+
 	if err := builder.WebhookManagedBy(mgr).
 		For(&corev1.Pod{}).
 		WithDefaulter(&podAnnotator{}).

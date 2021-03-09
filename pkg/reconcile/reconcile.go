@@ -52,6 +52,14 @@ type Request struct {
 	types.NamespacedName
 }
 
+// zhou: Reconciler implements a Kububernetes API, respond a specific Resoucing
+//       (what you are watching) changes, by approach of:
+//       1. Creating/Updating/Deleting Kubernetes native or CRD objects.
+//       2. Making changes to resources outside of cluster.
+//
+//       Normally, the triggers chould be cluster internal Events, external Events
+//       (Webhooks, polling external sources...)
+
 /*
 Reconciler implements a Kubernetes API for a specific Resource by Creating, Updating or Deleting Kubernetes
 objects, or by making changes to systems external to the cluster (e.g. cloudproviders, github, etc).
@@ -89,6 +97,9 @@ driven by actual cluster state read from the apiserver or a local cache.
 For example if responding to a Pod Delete Event, the Request won't contain that a Pod was deleted,
 instead the reconcile function observes this when reading the cluster state and seeing the Pod as missing.
 */
+
+// zhou: we usually defines user own struct and implement method comply this
+//       interface.
 type Reconciler interface {
 	// Reconcile performs a full reconciliation for the object referred to by the Request.
 	//
@@ -104,11 +115,18 @@ type Reconciler interface {
 	Reconcile(context.Context, Request) (Result, error)
 }
 
+// zhou: if user doesn't want define own type, here predefined a "type Func"
+//       which works like anon function.
+//       User could create a variable of this type with his own function definition.
+
 // Func is a function that implements the reconcile interface.
 type Func func(context.Context, Request) (Result, error)
 
+// zhou: just a compile time checking to make sure "type Func" match requirement
+//       of "type Reconciler interface".
 var _ Reconciler = Func(nil)
 
+// zhou: method of "type Func", used to meet "type Reconciler interface"
 // Reconcile implements Reconciler.
 func (r Func) Reconcile(ctx context.Context, o Request) (Result, error) { return r(ctx, o) }
 

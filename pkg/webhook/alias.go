@@ -55,6 +55,8 @@ type AdmissionResponse = admission.Response
 // mutates their contents.
 type Admission = admission.Webhook
 
+// zhou:
+
 // AdmissionHandler knows how to process admission requests, validating them,
 // and potentially mutating the objects they contain.
 type AdmissionHandler = admission.Handler

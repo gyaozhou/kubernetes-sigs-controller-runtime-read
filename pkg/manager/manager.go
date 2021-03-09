@@ -47,9 +47,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
+// zhou: "manager/internal/ type controllerManager struct {}" implement this interface.
+//       Provide common dependencies (Caches, Clients, ...)to Runnables
+//       (controllers and Admission Webhooks).
+
 // Manager initializes shared dependencies such as Caches and Clients, and provides them to Runnables.
 // A Manager is required to create Controllers.
 type Manager interface {
+
+	// zhou: holds lots of interface !!!
+
 	// Cluster holds a variety of methods to interact with a cluster.
 	cluster.Cluster
 
@@ -58,6 +65,8 @@ type Manager interface {
 	// Depending on if a Runnable implements LeaderElectionRunnable interface, a Runnable can be run in either
 	// non-leaderelection mode (always running) or leader election mode (managed by leader election if enabled).
 	Add(Runnable) error
+
+	// zhou: election phase completed.
 
 	// Elected is closed when this manager is elected leader of a group of
 	// managers, either because it won a leader election or because no leader
@@ -79,6 +88,8 @@ type Manager interface {
 	// AddReadyzCheck allows you to add Readyz checker
 	AddReadyzCheck(name string, check healthz.Checker) error
 
+	// zhou: starts all controllers and blocked.
+
 	// Start starts all registered Controllers and blocks until the context is cancelled.
 	// Returns an error if there is an error starting any controller.
 	//
@@ -97,8 +108,13 @@ type Manager interface {
 	GetControllerOptions() config.Controller
 }
 
+// zhou: README, options for creating a new Manager
+
 // Options are the arguments for creating a new Manager.
 type Options struct {
+	// zhou: client/client.go will use "scheme.Scheme" if not specified by user.
+	//       Scheme is a mapping between golang struct and GVR/GVK.
+
 	// Scheme is the scheme used to resolve runtime.Objects to GroupVersionKinds / Resources.
 	// Defaults to the kubernetes/client-go scheme.Scheme, but it's almost always better
 	// to pass your own scheme in. See the documentation in pkg/scheme for more information.
@@ -111,6 +127,8 @@ type Options struct {
 	// If set, the RESTMapper returned by this function is used to create the RESTMapper
 	// used by the Client and Cache.
 	MapperProvider func(c *rest.Config, httpClient *http.Client) (meta.RESTMapper, error)
+
+	// zhou: Cache.Namespaces watch all namespaces by default.
 
 	// Cache is the cache.Options that will be used to create the default Cache.
 	// By default, the cache will watch and list requested objects in all namespaces.
@@ -148,6 +166,8 @@ type Options struct {
 	// LeaderElection determines whether or not to use leader election when
 	// starting the manager.
 	LeaderElection bool
+
+	// zhou: default using ConfigMap "configmapleases" to acquire lock
 
 	// LeaderElectionResourceLock determines which resource lock to use for leader election,
 	// defaults to "leases". Change this value only if you know what you are doing.
@@ -220,6 +240,8 @@ type Options struct {
 	// between tries of actions. Default is 2 seconds.
 	RetryPeriod *time.Duration
 
+	// zhou: field "Namespace" is deprecated: Use Cache.Namespaces instead.
+
 	// Metrics are the metricsserver.Options that will be used to create the metricsserver.Server.
 	Metrics metricsserver.Options
 
@@ -287,6 +309,8 @@ type Options struct {
 // managed by a Manager.
 type BaseContextFunc func() context.Context
 
+// zhou:
+
 // Runnable allows a component to be started.
 // It's very important that Start blocks until
 // it's done running.
@@ -314,6 +338,8 @@ type LeaderElectionRunnable interface {
 	NeedLeaderElection() bool
 }
 
+// zhou: create a new Manager
+
 // New returns a new Manager for creating Controllers.
 // Note that if ContentType in the given config is not set, "application/vnd.kubernetes.protobuf"
 // will be used for all built-in resources of Kubernetes, and "application/json" is for other types
@@ -325,6 +351,7 @@ func New(config *rest.Config, options Options) (Manager, error) {
 	// Set default values for options fields
 	options = setOptionsDefaults(options)
 
+	// zhou:
 	cluster, err := cluster.New(config, func(clusterOptions *cluster.Options) {
 		clusterOptions.Scheme = options.Scheme
 		clusterOptions.MapperProvider = options.MapperProvider

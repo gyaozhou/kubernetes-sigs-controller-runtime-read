@@ -60,6 +60,8 @@ const (
 
 var _ Runnable = &controllerManager{}
 
+// zhou: implement "type Manager interface"
+
 type controllerManager struct {
 	sync.Mutex
 	started bool
@@ -163,10 +165,15 @@ type controllerManager struct {
 	internalProceduresStop chan struct{}
 }
 
+// zhou: README, used to ???
+
 type hasCache interface {
 	Runnable
 	GetCache() cache.Cache
 }
+
+// zhou: invoked when "controller.New()".
+//       "r" stands for the new created Controller.
 
 // Add sets dependencies on i, and adds it to the list of Runnables to start.
 func (cm *controllerManager) Add(r Runnable) error {

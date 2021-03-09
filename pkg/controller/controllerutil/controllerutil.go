@@ -52,6 +52,8 @@ func newAlreadyOwnedError(obj metav1.Object, owner metav1.OwnerReference) *Alrea
 	}
 }
 
+// zhou:
+
 // SetControllerReference sets owner as a Controller OwnerReference on controlled.
 // This is used for garbage collection of the controlled object and for
 // reconciling the owner object on changes to controlled (with a Watch + EnqueueRequestForOwner).
@@ -262,6 +264,8 @@ const ( // They should complete the sentence "Deployment default/foo has been ..
 	// OperationResultUpdatedStatusOnly means that only an existing status is updated.
 	OperationResultUpdatedStatusOnly OperationResult = "updatedStatusOnly"
 )
+
+// zhou: README, used a lot.
 
 // CreateOrUpdate creates or updates the given object in the Kubernetes
 // cluster. The object's desired state must be reconciled with the existing

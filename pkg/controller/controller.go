@@ -32,8 +32,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+// zhou: options for a controller, used in "ctrl.NewControllerManagedBy"
+
 // Options are the arguments for creating a new Controller.
 type Options struct {
+	// zhou: number of goroutine to handle this controller
 	// MaxConcurrentReconciles is the maximum number of concurrent Reconciles which can be run. Defaults to 1.
 	MaxConcurrentReconciles int
 
@@ -49,8 +52,13 @@ type Options struct {
 	// Defaults to true, which means the controller will use leader election.
 	NeedLeaderElection *bool
 
+	// zhou: populated in Builder.complete() or Builder.WithOptions(), the latter could overwrite
+	//       previous. Reconciler implementation should be implemented by user.
+
 	// Reconciler reconciles an object
 	Reconciler reconcile.Reconciler
+
+	// zhou: README,
 
 	// RateLimiter is used to limit how frequently requests may be queued.
 	// Defaults to MaxOfRateLimiter which has both overall and per-item rate limiting.
@@ -74,6 +82,8 @@ type Options struct {
 	LogConstructor func(request *reconcile.Request) logr.Logger
 }
 
+// zhou: implemented by "pkg/internal/controller/controller.go, Controller struct"
+
 // Controller implements a Kubernetes API.  A Controller manages a work queue fed reconcile.Requests
 // from source.Sources.  Work is performed through the reconcile.Reconciler for each enqueued item.
 // Work typically is reads and writes Kubernetes objects to make the system state match the state specified
@@ -93,6 +103,8 @@ type Controller interface {
 	GetLogger() logr.Logger
 }
 
+// zhou: create a new controller object, add to manager.
+
 // New returns a new Controller registered with the Manager.  The Manager will ensure that shared Caches have
 // been synced before the Controller is Started.
 func New(name string, mgr manager.Manager, options Options) (Controller, error) {
@@ -104,6 +116,8 @@ func New(name string, mgr manager.Manager, options Options) (Controller, error) 
 	// Add the controller as a Manager components
 	return c, mgr.Add(c)
 }
+
+// zhou:
 
 // NewUnmanaged returns a new controller without adding it to the manager. The
 // caller is responsible for starting the returned controller.
@@ -148,9 +162,13 @@ func NewUnmanaged(name string, mgr manager.Manager, options Options) (Controller
 		}
 	}
 
+	// zhou: used to throttling workqueue
 	if options.RateLimiter == nil {
+		// zhou: if not specified, set default strategy
 		options.RateLimiter = workqueue.DefaultControllerRateLimiter()
 	}
+
+	// zhou: create work queue consumed by user's controller.
 
 	if options.NewQueue == nil {
 		options.NewQueue = func(controllerName string, rateLimiter ratelimiter.RateLimiter) workqueue.RateLimitingInterface {

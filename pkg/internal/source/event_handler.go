@@ -42,6 +42,9 @@ func NewEventHandler[T client.Object](ctx context.Context, queue workqueue.RateL
 	}
 }
 
+// zhou: compatible with "client-go/tools/cache/controller.go ResourceEventHandler interface",
+//       which define "OnAdd/OnUpdate/OnDelete"
+
 // EventHandler adapts a handler.EventHandler interface to a cache.ResourceEventHandler interface.
 type EventHandler[T client.Object] struct {
 	// ctx stores the context that created the event handler
@@ -63,6 +66,8 @@ func (e *EventHandler[T]) HandlerFuncs() cache.ResourceEventHandlerFuncs {
 	}
 }
 
+// zhou: put the interesting events into queue which will be handled by controller's Reconcile().
+
 // OnAdd creates CreateEvent and calls Create on EventHandler.
 func (e *EventHandler[T]) OnAdd(obj interface{}) {
 	c := event.TypedCreateEvent[T]{}
@@ -75,6 +80,8 @@ func (e *EventHandler[T]) OnAdd(obj interface{}) {
 			"object", obj, "type", fmt.Sprintf("%T", obj))
 		return
 	}
+
+	// zhou: go through the filter defined by predicates.
 
 	for _, p := range e.predicates {
 		if !p.Create(c) {
