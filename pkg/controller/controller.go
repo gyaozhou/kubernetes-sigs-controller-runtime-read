@@ -32,11 +32,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+// zhou:
+
 // Options are the arguments for creating a new Controller
 type Options struct {
 	// MaxConcurrentReconciles is the maximum number of concurrent Reconciles which can be run. Defaults to 1.
 	MaxConcurrentReconciles int
 
+	// zhou:
 	// Reconciler reconciles an object
 	Reconciler reconcile.Reconciler
 
@@ -53,6 +56,9 @@ type Options struct {
 	// Defaults to 2 minutes if not set.
 	CacheSyncTimeout time.Duration
 }
+
+// zhou: implemented by
+//       "sigs.k8s.io/controller-runtime/pkg/internal/controller"
 
 // Controller implements a Kubernetes API.  A Controller manages a work queue fed reconcile.Requests
 // from source.Sources.  Work is performed through the reconcile.Reconciler for each enqueued item.
@@ -77,6 +83,8 @@ type Controller interface {
 	// GetLogger returns this controller logger prefilled with basic information.
 	GetLogger() logr.Logger
 }
+
+// zhou: README,
 
 // New returns a new Controller registered with the Manager.  The Manager will ensure that shared Caches have
 // been synced before the Controller is Started.

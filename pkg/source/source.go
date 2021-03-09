@@ -84,6 +84,8 @@ func (ks *kindWithCache) WaitForSync(ctx context.Context) error {
 	return ks.kind.WaitForSync(ctx)
 }
 
+// zhou: ???
+
 // Kind is used to provide a source of events originating inside the cluster from Watches (e.g. Pod Create)
 type Kind struct {
 	// Type is the type of object to watch.  e.g. &v1.Pod{}

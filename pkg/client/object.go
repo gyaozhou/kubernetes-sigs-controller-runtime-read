@@ -21,6 +21,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+// zhou: README,
+
 // Object is a Kubernetes object, allows functions to work indistinctly with
 // any resource that implements both Object interfaces.
 //

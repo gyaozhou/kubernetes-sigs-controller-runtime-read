@@ -28,6 +28,9 @@ var enqueueLog = logf.RuntimeLog.WithName("eventhandler").WithName("EnqueueReque
 
 var _ EventHandler = &EnqueueRequestForObject{}
 
+// zhou: enqueue what we watched
+//       e.g. when the pod changed, pod will be enqueued.
+
 // EnqueueRequestForObject enqueues a Request containing the Name and Namespace of the object that is the source of the Event.
 // (e.g. the created / deleted / updated objects Name and Namespace).  handler.EnqueueRequestForObject is used by almost all
 // Controllers that have associated Resources (e.g. CRDs) to reconcile the associated Resource.

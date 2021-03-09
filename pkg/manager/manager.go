@@ -46,9 +46,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
+// zhou:
+
 // Manager initializes shared dependencies such as Caches and Clients, and provides them to Runnables.
 // A Manager is required to create Controllers.
 type Manager interface {
+	// zhou:
 	// Cluster holds a variety of methods to interact with a cluster.
 	cluster.Cluster
 

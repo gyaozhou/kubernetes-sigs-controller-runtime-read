@@ -49,6 +49,8 @@ type Request struct {
 	types.NamespacedName
 }
 
+// zhou: README,
+
 /*
 Reconciler implements a Kubernetes API for a specific Resource by Creating, Updating or Deleting Kubernetes
 objects, or by making changes to systems external to the cluster (e.g. cloudproviders, github, etc).

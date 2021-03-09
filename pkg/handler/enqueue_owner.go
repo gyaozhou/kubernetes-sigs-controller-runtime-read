@@ -31,6 +31,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
+// zhou: enqueue the owner of what we watched
+//       e.g. when the pod changed, the owner ReplicaSets will be enqueued.
+
 var _ EventHandler = &EnqueueRequestForOwner{}
 
 var log = logf.RuntimeLog.WithName("eventhandler").WithName("EnqueueRequestForOwner")

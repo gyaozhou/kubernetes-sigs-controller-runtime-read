@@ -24,6 +24,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
+// zhou: enqueue the mapped object of what we watched
+//       e.g. when the pod changed, the predefiend objects of the pod will be enqueued.
+
 // MapFunc is the signature required for enqueueing requests from a generic function.
 // This type is usually used with EnqueueRequestsFromMapFunc when registering an event handler.
 type MapFunc func(client.Object) []reconcile.Request

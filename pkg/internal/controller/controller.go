@@ -38,6 +38,8 @@ import (
 
 var _ inject.Injector = &Controller{}
 
+// zhou: README,
+
 // Controller implements controller.Controller
 type Controller struct {
 	// Name is used to uniquely identify a Controller in tracing, logging and monitoring.  Name is required.
@@ -103,6 +105,8 @@ func (c *Controller) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	ctx = logf.IntoContext(ctx, log)
 	return c.Do.Reconcile(ctx, req)
 }
+
+// zhou: README,
 
 // Watch implements controller.Controller
 func (c *Controller) Watch(src source.Source, evthdler handler.EventHandler, prct ...predicate.Predicate) error {

@@ -96,6 +96,8 @@ type StatusWriter interface {
 	Patch(ctx context.Context, obj Object, patch Patch, opts ...PatchOption) error
 }
 
+// zhou:
+
 // Client knows how to perform CRUD operations on Kubernetes objects.
 type Client interface {
 	Reader
