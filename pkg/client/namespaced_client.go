@@ -25,6 +25,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+// zhou: what's the different between "mgr.GetClient()" ?
+
 // NewNamespacedClient wraps an existing client enforcing the namespace value.
 // All functions using this client will have the same namespace declared here.
 func NewNamespacedClient(c Client, ns string) Client {
@@ -146,6 +148,8 @@ func (n *namespacedClient) Patch(ctx context.Context, obj Object, patch Patch, o
 	}
 	return n.client.Patch(ctx, obj, patch, opts...)
 }
+
+// zhou: README,
 
 // Get implements client.Client.
 func (n *namespacedClient) Get(ctx context.Context, key ObjectKey, obj Object, opts ...GetOption) error {

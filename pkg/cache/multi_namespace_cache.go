@@ -35,6 +35,8 @@ import (
 // a new global namespaced cache to handle cluster scoped resources.
 const globalCache = "_cluster-scope"
 
+// zhou: README, this cache builder should be specified in "manager.option.NewCache"
+
 func newMultiNamespaceCache(
 	newCache newCacheFunc,
 	scheme *runtime.Scheme,
@@ -61,6 +63,8 @@ func newMultiNamespaceCache(
 		clusterCache:     clusterCache,
 	}
 }
+
+// zhou: README,
 
 // multiNamespaceCache knows how to handle multiple namespaced caches
 // Use this feature when scoping permissions for your

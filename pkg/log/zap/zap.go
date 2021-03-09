@@ -36,6 +36,8 @@ type EncoderConfigOption func(*zapcore.EncoderConfig)
 // NewEncoderFunc is a function that creates an Encoder using the provided EncoderConfigOptions.
 type NewEncoderFunc func(...EncoderConfigOption) zapcore.Encoder
 
+// zhou: README, create a "logr.logger" instance with actual backing logger "zap"
+
 // New returns a brand new Logger configured with Opts. It
 // uses KubeAwareEncoder which adds Type information and
 // Namespace/Name to the log.
@@ -222,6 +224,8 @@ func (o *Options) addDefaults() {
 	}
 	o.ZapOpts = append(o.ZapOpts, zap.AddStacktrace(o.StacktraceLevel))
 }
+
+// zhou:
 
 // NewRaw returns a new zap.Logger configured with the passed Opts
 // or their defaults. It uses KubeAwareEncoder which adds Type

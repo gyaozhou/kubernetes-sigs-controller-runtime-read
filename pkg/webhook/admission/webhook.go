@@ -95,6 +95,8 @@ func (r *Response) Complete(req Request) error {
 	return nil
 }
 
+// zhou: README,
+
 // Handler can handle an AdmissionRequest.
 type Handler interface {
 	// Handle yields a response to an AdmissionRequest.

@@ -91,6 +91,8 @@ func IsGVKNamespaced(gvk schema.GroupVersionKind, restmapper meta.RESTMapper) (b
 	return false, nil
 }
 
+// zhou: README,
+
 // GVKForObject finds the GroupVersionKind associated with the given object, if there is only a single such GVK.
 func GVKForObject(obj runtime.Object, scheme *runtime.Scheme) (schema.GroupVersionKind, error) {
 	// TODO(directxman12): do we want to generalize this to arbitrary container types?
@@ -167,6 +169,8 @@ func RESTClientForGVK(gvk schema.GroupVersionKind, isUnstructured bool, baseConf
 	}
 	return rest.RESTClientForConfigAndClient(createRestConfig(gvk, isUnstructured, baseConfig, codecs), httpClient)
 }
+
+// zhou: create a rest client which binds to a GVK.
 
 // createRestConfig copies the base config and updates needed fields for a new rest config.
 func createRestConfig(gvk schema.GroupVersionKind, isUnstructured bool, baseConfig *rest.Config, codecs serializer.CodecFactory) *rest.Config {

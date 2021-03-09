@@ -43,6 +43,8 @@ type GetOption interface {
 	ApplyToGet(*GetOptions)
 }
 
+// zhou: used in client List()
+
 // ListOption is some configuration that modifies options for a list request.
 type ListOption interface {
 	// ApplyToList applies this configuration to the given list options.
@@ -584,6 +586,9 @@ func (m MatchingLabels) ApplyToList(opts *ListOptions) {
 func (m MatchingLabels) ApplyToDeleteAllOf(opts *DeleteAllOfOptions) {
 	m.ApplyToList(&opts.ListOptions)
 }
+
+// zhou: README, how to represent complicated selector ???
+//       implement "interface ListOption".
 
 // HasLabels filters the list/delete operation checking if the set of labels exists
 // without checking their values.
