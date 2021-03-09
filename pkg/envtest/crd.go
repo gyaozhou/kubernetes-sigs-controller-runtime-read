@@ -178,6 +178,8 @@ type poller struct {
 	waitingFor map[schema.GroupVersion]*sets.Set[string]
 }
 
+// zhou: README,
+
 // poll checks if all the resources have been found in discovery, and returns false if not.
 func (p *poller) poll(ctx context.Context) (done bool, err error) {
 	// Create a new clientset to avoid any client caching of discovery

@@ -36,6 +36,8 @@ import (
 // CacheReader is a client.Reader.
 var _ client.Reader = &CacheReader{}
 
+// zhou: handle read from informer/indexer.
+
 // CacheReader wraps a cache.Index to implement the client.Reader interface for a single type.
 type CacheReader struct {
 	// indexer is the underlying indexer wrapped by this cache.
@@ -52,6 +54,9 @@ type CacheReader struct {
 	// otherwise you will mutate the object in the cache.
 	disableDeepCopy bool
 }
+
+// zhou: informerCache.Get() -> here
+//       We already checked that we have synced cache. So read indexer.
 
 // Get checks the indexer for the object and writes a copy of it if found.
 func (c *CacheReader) Get(_ context.Context, key client.ObjectKey, out client.Object, _ ...client.GetOption) error {
@@ -85,6 +90,7 @@ func (c *CacheReader) Get(_ context.Context, key client.ObjectKey, out client.Ob
 		// skip deep copy which might be unsafe
 		// you must DeepCopy any object before mutating it outside
 	} else {
+		// zhou: deep copy to user's controller.
 		// deep copy to avoid mutating cache
 		obj = obj.(runtime.Object).DeepCopyObject()
 	}

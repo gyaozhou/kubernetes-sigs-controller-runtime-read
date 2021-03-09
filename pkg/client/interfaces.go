@@ -160,6 +160,8 @@ type SubResourceClient interface {
 	SubResourceWriter
 }
 
+// zhou: DefaultNewClient() -> NewDelegatingClient()
+
 // Client knows how to perform CRUD operations on Kubernetes objects.
 type Client interface {
 	Reader
@@ -189,6 +191,8 @@ type WithWatch interface {
 // of non-namespaced keys. Namespaced objects are automatically given
 // namespaced and non-spaced variants, so keys do not need to include namespace.
 type IndexerFunc func(Object) []string
+
+// zhou: add index for future selector.
 
 // FieldIndexer knows how to index over a particular "field" such that it
 // can later be used by a field selector.

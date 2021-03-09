@@ -21,6 +21,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+// zhou: any object which embeds both ObjectMeta (which provides metav1.Object) and
+//       TypeMeta (which provides half of runtime.Object) and has
+//       a `DeepCopyObject` implementation (the other half of runtime.Object)
+//       will implement this by default.
+
 // Object is a Kubernetes object, allows functions to work indistinctly with
 // any resource that implements both Object interfaces.
 //

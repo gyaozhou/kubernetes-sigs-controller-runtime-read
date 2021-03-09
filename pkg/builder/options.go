@@ -44,6 +44,8 @@ type WatchesOption interface {
 
 // {{{ Multi-Type Options
 
+// zhou: used to create "Predictes" from a slice of "predicate.Predicate"
+
 // WithPredicates sets the given predicates list.
 func WithPredicates(predicates ...predicate.Predicate) Predicates {
 	return Predicates{
@@ -55,6 +57,8 @@ func WithPredicates(predicates ...predicate.Predicate) Predicates {
 type Predicates struct {
 	predicates []predicate.Predicate
 }
+
+// zhou: using "WithPredicates()" to implement "ForOption interface"
 
 // ApplyToFor applies this configuration to the given ForInput options.
 func (w Predicates) ApplyToFor(opts *ForInput) {

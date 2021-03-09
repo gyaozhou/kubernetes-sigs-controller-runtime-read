@@ -106,6 +106,8 @@ var (
 	EmptyArguments = process.EmptyArguments
 )
 
+// zhou: README,
+
 // Environment creates a Kubernetes test environment that will start / stop the Kubernetes control plane and
 // install extension APIs.
 type Environment struct {
@@ -129,8 +131,12 @@ type Environment struct {
 	// CRDInstallOptions are the options for installing CRDs.
 	CRDInstallOptions CRDInstallOptions
 
+	// zhou:
+
 	// WebhookInstallOptions are the options for installing webhooks.
 	WebhookInstallOptions WebhookInstallOptions
+
+	// zhou:
 
 	// ErrorIfCRDPathMissing provides an interface for the underlying
 	// CRDInstallOptions.ErrorIfPathMissing. It prevents silent failures
@@ -141,6 +147,8 @@ type Environment struct {
 	// If both this field and CRDs field in CRDInstallOptions are specified, the
 	// values are merged.
 	CRDs []*apiextensionsv1.CustomResourceDefinition
+
+	// zhou: specify the CRD definition folders.
 
 	// CRDDirectoryPaths is a list of paths containing CRD yaml or json configs.
 	// If both this field and Paths field in CRDInstallOptions are specified, the
@@ -186,6 +194,8 @@ type Environment struct {
 	AttachControlPlaneOutput bool
 }
 
+// zhou:
+
 // Stop stops a running server.
 // Previously installed CRDs, as listed in CRDInstallOptions.CRDs, will be uninstalled
 // if CRDInstallOptions.CleanUpAfterUse are set to true.
@@ -207,6 +217,8 @@ func (te *Environment) Stop() error {
 	return te.ControlPlane.Stop()
 }
 
+// zhou: README,
+
 // Start starts a local Kubernetes server and updates te.ApiserverPort with the port it is listening on.
 func (te *Environment) Start() (*rest.Config, error) {
 	if te.useExistingCluster() {
@@ -222,7 +234,10 @@ func (te *Environment) Start() (*rest.Config, error) {
 				return nil, fmt.Errorf("unable to get configuration for existing cluster: %w", err)
 			}
 		}
+
 	} else {
+		// zhou: in case of fake cluster
+
 		apiServer := te.ControlPlane.GetAPIServer()
 
 		if te.ControlPlane.Etcd == nil {
@@ -271,6 +286,7 @@ func (te *Environment) Start() (*rest.Config, error) {
 		apiServer.StartTimeout = te.ControlPlaneStartTimeout
 		apiServer.StopTimeout = te.ControlPlaneStopTimeout
 
+		// zhou: control plane includes etcd, apiserver, kubectl
 		log.V(1).Info("starting control plane")
 		if err := te.startControlPlane(); err != nil {
 			return nil, fmt.Errorf("unable to start control plane itself: %w", err)

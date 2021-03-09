@@ -62,6 +62,14 @@ type Request struct {
 	types.NamespacedName
 }
 
+// zhou: Reconciler implements a Kububernetes API, respond a specific Resoucing
+//       (what you are watching) changes, by approach of:
+//       1. Creating/Updating/Deleting Kubernetes native or CRD objects.
+//       2. Making changes to resources outside of cluster.
+//
+//       Normally, the triggers chould be cluster internal Events, external Events
+//       (Webhooks, polling external sources...)
+
 /*
 Reconciler implements a Kubernetes API for a specific Resource by Creating, Updating or Deleting Kubernetes
 objects, or by making changes to systems external to the cluster (e.g. cloudproviders, github, etc).
@@ -101,6 +109,8 @@ instead the reconcile function observes this when reading the cluster state and 
 */
 type Reconciler = TypedReconciler[Request]
 
+// zhou: we usually defines user own struct and implement methods of this interface.
+
 // TypedReconciler implements an API for a specific Resource by Creating, Updating or Deleting Kubernetes
 // objects, or by making changes to systems external to the cluster (e.g. cloudproviders, github, etc).
 //
@@ -121,14 +131,22 @@ type TypedReconciler[request comparable] interface {
 	Reconcile(context.Context, request) (Result, error)
 }
 
+// zhou: if user doesn't want define own type, here predefined a "type Func"
+//       which works like anon function.
+//       User could create a variable of this type with his own function definition.
+
 // Func is a function that implements the reconcile interface.
 type Func = TypedFunc[Request]
 
 // TypedFunc is a function that implements the reconcile interface.
 type TypedFunc[request comparable] func(context.Context, request) (Result, error)
 
+// zhou: just a compile time checking to make sure "type Func" match requirement
+//
+//	of "type Reconciler interface".
 var _ Reconciler = Func(nil)
 
+// zhou: method of "type Func", used to meet "type Reconciler interface"
 // Reconcile implements Reconciler.
 func (r TypedFunc[request]) Reconcile(ctx context.Context, req request) (Result, error) {
 	return r(ctx, req)

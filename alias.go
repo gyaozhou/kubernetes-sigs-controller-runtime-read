@@ -16,6 +16,8 @@ limitations under the License.
 
 package controllerruntime
 
+// zhou: alias make things confusing. User don't know where the package implement it.
+
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"

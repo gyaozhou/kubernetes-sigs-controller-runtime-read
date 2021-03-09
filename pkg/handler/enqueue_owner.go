@@ -32,12 +32,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+// zhou: enqueue the owner of what we watched
+//       e.g. when the pod changed, the owner ReplicaSets will be enqueued.
+
 var _ EventHandler = &enqueueRequestForOwner[client.Object]{}
 
 var log = logf.RuntimeLog.WithName("eventhandler").WithName("enqueueRequestForOwner")
 
 // OwnerOption modifies an EnqueueRequestForOwner EventHandler.
 type OwnerOption func(e enqueueRequestForOwnerInterface)
+
+// zhou: enqueue the owner of the object.
 
 // EnqueueRequestForOwner enqueues Requests for the Owners of an object.  E.g. the object that created
 // the object that was the source of the Event.
@@ -141,6 +146,8 @@ func (e *enqueueRequestForOwner[object]) Generic(ctx context.Context, evt event.
 	}
 }
 
+// zhou: according to ower type, get group/kind, ignore version.
+
 // parseOwnerTypeGroupKind parses the OwnerType into a Group and Kind and caches the result.  Returns false
 // if the OwnerType could not be parsed using the scheme.
 func (e *enqueueRequestForOwner[object]) parseOwnerTypeGroupKind(scheme *runtime.Scheme) error {
@@ -161,6 +168,8 @@ func (e *enqueueRequestForOwner[object]) parseOwnerTypeGroupKind(scheme *runtime
 	return nil
 }
 
+// zhou: get object's owner
+
 // getOwnerReconcileRequest looks at object and builds a map of reconcile.Request to reconcile
 // owners of object that match e.OwnerType.
 func (e *enqueueRequestForOwner[object]) getOwnerReconcileRequest(obj metav1.Object, result map[reconcile.Request]empty) {
@@ -175,6 +184,8 @@ func (e *enqueueRequestForOwner[object]) getOwnerReconcileRequest(obj metav1.Obj
 			return
 		}
 
+		// zhou: if the type must be matched
+
 		// Compare the OwnerReference Group and Kind against the OwnerType Group and Kind specified by the user.
 		// If the two match, create a Request for the objected referred to by
 		// the OwnerReference.  Use the Name from the OwnerReference and the Namespace from the
@@ -182,6 +193,7 @@ func (e *enqueueRequestForOwner[object]) getOwnerReconcileRequest(obj metav1.Obj
 		if ref.Kind == e.groupKind.Kind && refGV.Group == e.groupKind.Group {
 			// Match found - add a Request for the object referred to in the OwnerReference
 			request := reconcile.Request{NamespacedName: types.NamespacedName{
+				// zhou: specify name here, namespace later.
 				Name: ref.Name,
 			}}
 
@@ -195,6 +207,7 @@ func (e *enqueueRequestForOwner[object]) getOwnerReconcileRequest(obj metav1.Obj
 				request.Namespace = obj.GetNamespace()
 			}
 
+			// zhou: push request to queue.
 			result[request] = empty{}
 		}
 	}

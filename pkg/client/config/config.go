@@ -57,6 +57,11 @@ func RegisterFlags(fs *flag.FlagSet) {
 	}
 }
 
+// zhou: first try to read "--kubeconfig" specified file. If failed,
+//       try to read "KUBECONFIG" specified file. If failed,
+//       try to read "/var/run/secrets/kubernetes.io/serviceaccount", which applicable in cluster. If failed
+//       try to read "$HOME/.kube/config", which is used by kubectl.
+
 // GetConfig creates a *rest.Config for talking to a Kubernetes API server.
 // If --kubeconfig is set, will use the kubeconfig file at that location.  Otherwise will assume running
 // in cluster and use the cluster provided kubeconfig.
@@ -128,6 +133,7 @@ func loadConfig(context string) (config *rest.Config, configErr error) {
 	// try the in-cluster config.
 	kubeconfigPath := os.Getenv(clientcmd.RecommendedConfigPathEnvVar)
 	if len(kubeconfigPath) == 0 {
+		// zhou: load when in cluster
 		c, err := loadInClusterConfig()
 		if err == nil {
 			return c, nil
@@ -139,6 +145,9 @@ func loadConfig(context string) (config *rest.Config, configErr error) {
 			}
 		}()
 	}
+
+	// zhou: using KUBECONFIG or $HOME/.kube/config
+	//       "client.go/clientcmd/WriteToFile" is used to generate kubeconfig file.
 
 	// If the recommended kubeconfig env variable is set, or there
 	// is no in-cluster config, try the default recommended locations.
@@ -170,6 +179,8 @@ func loadConfigWithContext(apiServerURL string, loader clientcmd.ClientConfigLoa
 			CurrentContext: context,
 		}).ClientConfig()
 }
+
+// zhou: get a rest.Config to talk with apiserver
 
 // GetConfigOrDie creates a *rest.Config for talking to a Kubernetes apiserver.
 // If --kubeconfig is set, will use the kubeconfig file at that location.  Otherwise will assume running

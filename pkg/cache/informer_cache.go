@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
+// zhou: quite useful to indicate which interfaces this struct supporting
 var (
 	_ Informers     = &informerCache{}
 	_ client.Reader = &informerCache{}
@@ -70,12 +71,17 @@ type informerCache struct {
 	readerFailOnMissingInformer bool
 }
 
+// zhou: handle manager.GetClient().Get() -> delegatingReader.Get() -> here
+
 // Get implements Reader.
 func (ic *informerCache) Get(ctx context.Context, key client.ObjectKey, out client.Object, opts ...client.GetOption) error {
 	gvk, err := apiutil.GVKForObject(out, ic.scheme)
 	if err != nil {
 		return err
 	}
+	// zhou: InformersMap.Get() -> specificInformersMap.Get()
+	//       If never read before and not watched before, it will create informer firstly.
+	//       README, How about the namespace is never be set to cache ???
 
 	started, cache, err := ic.getInformerForKind(ctx, gvk, out)
 	if err != nil {
@@ -85,6 +91,9 @@ func (ic *informerCache) Get(ctx context.Context, key client.ObjectKey, out clie
 	if !started {
 		return &ErrCacheNotStarted{}
 	}
+
+	// zhou: CacheReader.Get()
+
 	return cache.Reader.Get(ctx, key, out, opts...)
 }
 
@@ -149,6 +158,8 @@ func applyGetOptions(opts ...InformerGetOption) *internal.GetOptions {
 	return (*internal.GetOptions)(cfg)
 }
 
+// zhou:
+
 // GetInformerForKind returns the informer for the GroupVersionKind. If no informer exists, one will be started.
 func (ic *informerCache) GetInformerForKind(ctx context.Context, gvk schema.GroupVersionKind, opts ...InformerGetOption) (Informer, error) {
 	// Map the gvk to an object
@@ -163,6 +174,8 @@ func (ic *informerCache) GetInformerForKind(ctx context.Context, gvk schema.Grou
 	}
 	return i.Informer, nil
 }
+
+// zhou: README,
 
 // GetInformer returns the informer for the obj. If no informer exists, one will be started.
 func (ic *informerCache) GetInformer(ctx context.Context, obj client.Object, opts ...InformerGetOption) (Informer, error) {
