@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
+	"sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	intrec "sigs.k8s.io/controller-runtime/pkg/internal/recorder"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
@@ -108,6 +109,9 @@ type controllerManager struct {
 	healthzStarted bool
 	errChan        chan error
 
+	// controllerOptions are the global controller options.
+	controllerOptions v1alpha1.ControllerConfigurationSpec
+
 	// Logger is the logger that should be used by this manager.
 	// If none is set, it defaults to log.Log global logger.
 	logger logr.Logger
@@ -116,6 +120,10 @@ type controllerManager struct {
 	// because for safety reasons we need to os.Exit() when we lose the leader election, meaning that
 	// it must be deferred until after gracefulShutdown is done.
 	leaderElectionCancel context.CancelFunc
+
+	// leaderElectionStopped is an internal channel used to signal the stopping procedure that the
+	// LeaderElection.Run(...) function has returned and the shutdown can proceed.
+	leaderElectionStopped chan struct{}
 
 	// stop procedure engaged. In other words, we should not add anything else to the manager
 	stopProcedureEngaged bool
@@ -212,6 +220,7 @@ func (cm *controllerManager) Add(r Runnable) error {
 	return nil
 }
 
+// Deprecated: use the equivalent Options field to set a field. This method will be removed in v0.10.
 func (cm *controllerManager) SetFields(i interface{}) error {
 	if _, err := inject.InjectorInto(cm.SetFields, i); err != nil {
 		return err
@@ -353,6 +362,10 @@ func (cm *controllerManager) GetWebhookServer() *webhook.Server {
 
 func (cm *controllerManager) GetLogger() logr.Logger {
 	return cm.logger
+}
+
+func (cm *controllerManager) GetControllerOptions() v1alpha1.ControllerConfigurationSpec {
+	return cm.controllerOptions
 }
 
 func (cm *controllerManager) serveMetrics() {
@@ -545,11 +558,16 @@ func (cm *controllerManager) engageStopProcedure(stopComplete <-chan struct{}) e
 
 // waitForRunnableToEnd blocks until all runnables ended or the
 // tearDownTimeout was reached. In the latter case, an error is returned.
-func (cm *controllerManager) waitForRunnableToEnd(shutdownCancel context.CancelFunc) error {
+func (cm *controllerManager) waitForRunnableToEnd(shutdownCancel context.CancelFunc) (retErr error) {
 	// Cancel leader election only after we waited. It will os.Exit() the app for safety.
 	defer func() {
-		if cm.leaderElectionCancel != nil {
+		if retErr == nil && cm.leaderElectionCancel != nil {
+			// After asking the context to be cancelled, make sure
+			// we wait for the leader stopped channel to be closed, otherwise
+			// we might encounter race conditions between this code
+			// and the event recorder, which is used within leader election code.
 			cm.leaderElectionCancel()
+			<-cm.leaderElectionStopped
 		}
 	}()
 
@@ -652,7 +670,11 @@ func (cm *controllerManager) startLeaderElection() (err error) {
 	}
 
 	// Start the leader elector process
-	go l.Run(ctx)
+	go func() {
+		l.Run(ctx)
+		<-ctx.Done()
+		close(cm.leaderElectionStopped)
+	}()
 	return nil
 }
 
